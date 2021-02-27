@@ -5,7 +5,7 @@ from . import views
 app_name = 'polls'
 urlpatterns = [
     path('', views.index, name='index'),
-    path('show/<int:user>', views.show, name='show'),
+    path('show', views.show, name='show'),
     # ex: /polls/5/
     path('<int:question_id>/', views.detail, name='detail'),
     # ex: /polls/5/results/
