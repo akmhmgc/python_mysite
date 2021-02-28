@@ -1,36 +1,49 @@
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
+from django.views import generic
+from django.utils import timezone
 
-# モデルのインポート
 from .models import Choice, Question
 
 
 # Create your views here.
-def index(request):
-    # 　モデルの読み込み
-    latest_question_list = Question.objects.order_by('-pub_date')[:5]
-    # テンプレート内で使用する変数（コンテクスト）の設定
-    context = {'latest_question_list': latest_question_list}
-    # レンダリング
-    return render(request, 'polls/index.html', context)
+class IndexView(generic.ListView):
+    # デフォルトではないテンプレート名を指定する(デフォルトは<app name>/<model name>_list.html)
+    template_name = 'polls/index.html'
+
+    context_object_name = 'latest_question_list'
+
+    def get_queryset(self):
+        # pub_dateが未来の日付のデータは返さない
+        return Question.objects.filter(
+            pub_date__lte=timezone.now()
+        ).exclude(choice=None).order_by('-pub_date')[:5]
 
 
 # getメソッドを用いた値の受け渡し
 def show(request):
-    text = str(request.GET['text'])
+    if "text" in request.GET:
+        text = str(request.GET['text'])
+    else:
+        text = "default"
     return render(request, 'polls/show.html', {"text": text})
 
 
-# テーブルが見つからなかった場合404を返す
-def detail(request, question_id):
-    question = get_object_or_404(Question, pk=question_id)
-    return render(request, 'polls/detail.html', {'question': question})
+class DetailView(generic.DetailView):
+    template_name = 'polls/detail.html'
+
+    def get_queryset(self):
+        """
+        Excludes any questions that aren't published yet.
+        子モデル(choice)が存在しないものは除外
+        """
+        return Question.objects.filter(pub_date__lte=timezone.now()).exclude(choice=None)
 
 
-def results(request, question_id):
-    question = get_object_or_404(Question, pk=question_id)
-    return render(request, 'polls/results.html', {'question': question})
+class ResultsView(generic.DetailView):
+    model = Question
+    template_name = 'polls/results.html'
 
 
 def vote(request, question_id):
